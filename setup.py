@@ -10,6 +10,7 @@ setup(
         'pyYAML',
         'pyspark',
         'psutil',
+        'pytest'
     ],
     author='Nicola Pagliarulo',
     author_email='nicola.pagliarulo200@gmail.com',
