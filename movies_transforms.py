@@ -10,9 +10,7 @@ from spark_utils import create_spark_session
 
 
 FOLDER_PATH = Path(__file__).resolve().parent
-config = configs.data_processing_config(
-    f"{FOLDER_PATH}/configs/data_processing_config.yaml"
-)
+config = configs.data_processing_config(f"{FOLDER_PATH}/configs/data_processing_config.yaml")
 data_sources = config["data_sources"]
 write_locations = config["write_locations"]
 spark = create_spark_session()
@@ -166,7 +164,7 @@ class MoviesTransforms:
         ).select("movieId", "id", "avg_rating", "title", "count_of_ratings")
         self.top_five_rated = movies_ratings.orderBy(
             F.col("avg_rating").desc(), F.col("count_of_ratings").desc()
-).limit(5)
+        ).limit(5)
         self.top_five_rated.show(truncate=False)
         end_time = time.time()
         part_four_time = round(end_time - start_time, 2)
