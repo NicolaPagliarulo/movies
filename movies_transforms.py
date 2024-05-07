@@ -242,6 +242,11 @@ class MoviesTransforms:
         return avg_ratings
 
     def write_dfs(self):
+        """
+        Method to write all the result dataframes created from the transformation methods.
+
+        Returns: None
+        """
         self.count_of_distinct_movies_df.write.mode("overwrite").json(
             f"{str(FOLDER_PATH)}/{write_locations['processed_dataframes']}/count_of_distinct_movies"
         )
