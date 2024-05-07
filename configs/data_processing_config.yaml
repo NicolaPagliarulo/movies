@@ -1,0 +1,5 @@
+data_sources:
+  movies_metadata_csv: "archive/movies_metadata.csv"
+  ratings_csv: "archive/ratings_small.csv"
+write_locations:
+  processed_dataframes: "processed_dataframes"
