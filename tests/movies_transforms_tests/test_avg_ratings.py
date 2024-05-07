@@ -41,7 +41,7 @@ def test_avg_ratings_all_columns_are_present(spark, avg_ratings_transform_test):
     assert avg_ratings_cols.issubset({"movieId", "avg_rating", "count_of_ratings"})
 
 
-def test__avg_ratings_datatypes_are_correct(spark, avg_ratings_transform_test):
+def test_avg_ratings_datatypes_are_correct(spark, avg_ratings_transform_test):
     are_all_datatypes_correct = [
         avg_ratings_transform_test.schema["movieId"].dataType == T.StringType(),
         avg_ratings_transform_test.schema["avg_rating"].dataType == T.DoubleType(),
