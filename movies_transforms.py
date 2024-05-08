@@ -81,7 +81,7 @@ class MoviesTransforms:
         """
         start_time = time.time()
 
-        count_of_distinct_movies = self.movies.select("title").distinct().count()
+        count_of_distinct_movies = self.movies.select("title", "id").distinct().count()
         self.count_of_distinct_movies_df = self.spark.createDataFrame(
             [(count_of_distinct_movies,)], [("count_of_distinct_movies")]
         )

@@ -12,8 +12,9 @@ def get_average_ratings(ratings_df) -> DataFrame:
     ratings_df = ratings_df.withColumn("rating", F.col("rating").cast("int"))
     avg_ratings = ratings_df.groupBy("movieId").agg(
         F.round(F.avg("rating"), 2).alias("avg_rating"),
-        F.count("movieId").alias("count_of_ratings"),
+        F.count("userId").alias("count_of_ratings"),
     )
+
     return avg_ratings
 
 
@@ -22,8 +23,8 @@ def check_mandatory_cols(movies_df: DataFrame, ratings_df: DataFrame, is_caller_
     Checks if the data which we initially read has all the necessary cols.
     (If we don`t it throws an error which contains the missing cols)
 
-    :param: movies_df: The movies_df which we are going to use for our transformations
-    :param: ratings_df: The ratings_df which we are going to use for our transformations
+    :param movies_df: The movies_df which we are going to use for our transformations
+    :param ratings_df: The ratings_df which we are going to use for our transformations
     :param is_caller_test_file: Bool value which indicates if the caller is a test file or not
 
     :return: None
