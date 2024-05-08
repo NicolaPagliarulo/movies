@@ -52,6 +52,7 @@ class MoviesTransforms:
         :param: ratings_path: The path to the ratings data source
         """
         self.spark = spark_session
+        self._configure_logging()
         caller_file_path = inspect.stack()[1].filename
         self.is_caller_test_file = False
         if "test" in caller_file_path:
@@ -64,9 +65,8 @@ class MoviesTransforms:
         exec_time = round(end_time - start_time, 2)
         self.log(f"class initialization approximate execution time - {exec_time}")
 
-        self.physical_cores = psutil.cpu_count(logical=False)
         check_mandatory_cols(self.movies, self.ratings, self.is_caller_test_file)
-        self._configure_logging()
+        self.physical_cores = psutil.cpu_count(logical=False)
         self.count_of_distinct_movies_df = DataFrame
         self.avg_ratings = DataFrame
         self.top_five_rated = DataFrame
