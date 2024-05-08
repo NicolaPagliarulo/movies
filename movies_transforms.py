@@ -5,7 +5,7 @@ import psutil
 import configs
 from pathlib import Path
 from pyspark.sql import functions as F, types as T, SparkSession, DataFrame
-from constants import MOVIES_MANDATORY_COLS, RATINGS_MANDATORY_COLS
+from helper_functions.movies_transforms_helpers import check_mandatory_cols, get_average_ratings
 from spark_utils import create_spark_session
 
 
@@ -24,7 +24,7 @@ class MoviesTransforms:
     @staticmethod
     def _configure_logging() -> None:
         """
-        Private method which sets the logging config
+        Static method which sets the logging config
 
         :return: None
         """
@@ -33,44 +33,6 @@ class MoviesTransforms:
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
-
-    @staticmethod
-    def check_if_execute_from_test() -> bool:
-        """
-        Helper method to check if the file from which we create our class instance is from a test file
-
-        :return: True|False
-        """
-        file = inspect.stack()[0]
-        if "test" in file.filename:
-            return True
-        return False
-
-    @staticmethod
-    def check_mandatory_cols(movies_df: DataFrame, ratings_df: DataFrame) -> None:
-        """
-        Checks if the data which we initially read has all the necessary cols.
-        (If we don`t it throws an error which contains the missing cols)
-
-        :param: movies_df: The movies_df which we are going to use for our transformations
-        :param: ratings_df: The ratings_df which we are going to use for our transformations
-        :return: None
-        """
-        movies_missing_cols = set(MOVIES_MANDATORY_COLS) - set(movies_df.columns)
-        if movies_missing_cols:
-            raise ValueError(
-                f"Missing mandatory cols for movies: {movies_missing_cols}"
-            )
-        else:
-            print("All mandatory cols for movies are present.")
-
-        ratings_missing_cols = set(RATINGS_MANDATORY_COLS) - set(ratings_df.columns)
-        if ratings_missing_cols:
-            raise ValueError(
-                f"Missing mandatory cols for ratings: {ratings_missing_cols}"
-            )
-        else:
-            print("All mandatory cols for ratings are present.")
 
     def __init__(
         self,
@@ -89,26 +51,27 @@ class MoviesTransforms:
         :param: movies_path: The path to the movies data source
         :param: ratings_path: The path to the ratings data source
         """
-        start_time = time.time()
-
         self.spark = spark_session
-        self.physical_cores = psutil.cpu_count(logical=False)
+        caller_file_path = inspect.stack()[1].filename
+        self.is_caller_test_file = False
+        if "test" in caller_file_path:
+            self.is_caller_test_file = True
+
+        start_time = time.time()
         self.movies = self.spark.read.csv(header=True, path=movies_path)
         self.ratings = self.spark.read.csv(header=True, path=ratings_path)
+        end_time = time.time()
+        exec_time = round(end_time - start_time, 2)
+        self.log(f"class initialization approximate execution time - {exec_time}")
 
-        self.check_mandatory_cols(self.movies, self.ratings)
+        self.physical_cores = psutil.cpu_count(logical=False)
+        check_mandatory_cols(self.movies, self.ratings, self.is_caller_test_file)
         self._configure_logging()
-
         self.count_of_distinct_movies_df = DataFrame
         self.avg_ratings = DataFrame
         self.top_five_rated = DataFrame
         self.movies_per_year = DataFrame
         self.count_of_movies_per_genre = DataFrame
-
-        end_time = time.time()
-        exec_time = round(end_time - start_time, 2)
-
-        self.log(f"class initialization approximate execution time - {exec_time}")
 
     def count_distinct_movies_transform(self) -> DataFrame:
         """
@@ -122,12 +85,12 @@ class MoviesTransforms:
         self.count_of_distinct_movies_df = self.spark.createDataFrame(
             [(count_of_distinct_movies,)], [("count_of_distinct_movies")]
         )
+        self.show_data(self.count_of_distinct_movies_df, n=10)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
-        self.log(f"'avg_ratings' transform approximate execution time - {exec_time}")
-        self.show_data(self.count_of_distinct_movies_df, n=10)
+        self.log(f"'count_distinct_movies' transform approximate execution time - {exec_time}")
 
         return self.count_of_distinct_movies_df
 
@@ -138,13 +101,14 @@ class MoviesTransforms:
         :return: DataFrame
         """
         start_time = time.time()
-        self.avg_ratings = self.get_average_ratings()
+
+        self.avg_ratings = get_average_ratings(self.ratings)
+        self.show_data(self.avg_ratings, n=10)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
         self.log(f"'avg_ratings' transform approximate execution time - {exec_time}")
-        self.show_data(self.avg_ratings, n=10)
 
         return self.avg_ratings
 
@@ -156,19 +120,19 @@ class MoviesTransforms:
         """
         start_time = time.time()
 
-        avg_ratings = self.get_average_ratings()
+        avg_ratings = get_average_ratings(self.ratings)
         movies_ratings = self.movies.join(
             avg_ratings, self.movies.id == avg_ratings.movieId, how="left"
         ).select("movieId", "id", "avg_rating", "title", "count_of_ratings")
         self.top_five_rated = movies_ratings.orderBy(
             F.col("avg_rating").desc(), F.col("count_of_ratings").desc()
         ).limit(5)
+        self.show_data(self.top_five_rated, truncate=False)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
         self.log(f"'top_five_rated' transform approximate execution time - {exec_time}")
-        self.show_data(self.top_five_rated, truncate=False)
 
         return self.top_five_rated
 
@@ -183,12 +147,12 @@ class MoviesTransforms:
         self.movies_per_year = self.movies.groupBy("release_date").agg(
             F.count("id").alias("movies_released")
         )
+        self.show_data(self.movies_per_year, n=10)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
         self.log(f"'movies_per_year' transform approximate execution time - {exec_time}")
-        self.show_data(self.movies_per_year, n=10)
 
         return self.movies_per_year
 
@@ -221,28 +185,14 @@ class MoviesTransforms:
         self.count_of_movies_per_genre = movie_genres_pivoted.selectExpr(
             *count_of_genres_select_expr
         )
+        self.show_data(self.count_of_movies_per_genre)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
         self.log(f"'count_of_movies_per_genre' transform approximate execution time - {exec_time}")
-        self.show_data(self.count_of_movies_per_genre)
 
         return self.count_of_movies_per_genre
-
-    def get_average_ratings(self) -> DataFrame:
-        """
-        Common code which is used for two methods above.
-        Transforms data to get the average ratings of all movies.
-
-        :return: DataFrame
-        """
-        self.ratings = self.ratings.withColumn("rating", F.col("rating").cast("int"))
-        avg_ratings = self.ratings.groupBy("movieId").agg(
-            F.round(F.avg("rating"), 2).alias("avg_rating"),
-            F.count("movieId").alias("count_of_ratings"),
-        )
-        return avg_ratings
 
     def write_dfs(self) -> None:
         """
@@ -272,15 +222,14 @@ class MoviesTransforms:
 
     def show_data(self, df: DataFrame, truncate=True, n=20) -> None:
         """
-        Shows the data of the passed DataFrame
+        Shows the data of the passed DataFrame if the execution file isn`t a test file
 
         :param: df: The DataFrame which is going to be shown
         :param: truncate: Option passed to the shown method if we want the data to be truncated or not.
         :param: n: The number of rows to be shown
         :return: None
         """
-        is_from_test_file = self.check_if_execute_from_test()
-        if not is_from_test_file:
+        if not self.is_caller_test_file:
             df.show(truncate=truncate, n=n)
 
     def log(self, message: str) -> None:
@@ -290,8 +239,7 @@ class MoviesTransforms:
         :param: message: The message to log
         :return: None
         """
-        is_from_test_file = self.check_if_execute_from_test()
-        if not is_from_test_file:
+        if not self.is_caller_test_file:
             logging.info(message)
 
 
