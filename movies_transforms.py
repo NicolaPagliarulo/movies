@@ -54,18 +54,18 @@ class MoviesTransforms:
         self.spark = spark_session
         self._configure_logging()
         caller_file_path = inspect.stack()[1].filename
-        self.is_caller_test_file = False
+        self._is_caller_test_file = False
         if "test" in caller_file_path:
-            self.is_caller_test_file = True
+            self._is_caller_test_file = True
 
         start_time = time.time()
         self.movies = self.spark.read.csv(header=True, path=movies_path)
         self.ratings = self.spark.read.csv(header=True, path=ratings_path)
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
-        self.log(f"class initialization approximate execution time - {exec_time}")
+        self._log(f"class initialization approximate execution time - {exec_time}")
 
-        check_mandatory_cols(self.movies, self.ratings, self.is_caller_test_file)
+        check_mandatory_cols(self.movies, self.ratings, self._is_caller_test_file)
         self.physical_cores = psutil.cpu_count(logical=False)
         self.count_of_distinct_movies_df = DataFrame
         self.avg_ratings = DataFrame
@@ -85,12 +85,12 @@ class MoviesTransforms:
         self.count_of_distinct_movies_df = self.spark.createDataFrame(
             [(count_of_distinct_movies,)], [("count_of_distinct_movies")]
         )
-        self.show_data(self.count_of_distinct_movies_df, n=10)
+        self._show_data(self.count_of_distinct_movies_df, n=10)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
-        self.log(f"'count_distinct_movies' transform approximate execution time - {exec_time}")
+        self._log(f"'count_distinct_movies' transform approximate execution time - {exec_time}")
 
         return self.count_of_distinct_movies_df
 
@@ -103,12 +103,12 @@ class MoviesTransforms:
         start_time = time.time()
 
         self.avg_ratings = get_average_ratings(self.ratings)
-        self.show_data(self.avg_ratings, n=10)
+        self._show_data(self.avg_ratings, n=10)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
-        self.log(f"'avg_ratings' transform approximate execution time - {exec_time}")
+        self._log(f"'avg_ratings' transform approximate execution time - {exec_time}")
 
         return self.avg_ratings
 
@@ -127,12 +127,12 @@ class MoviesTransforms:
         self.top_five_rated = movies_ratings.orderBy(
             F.col("avg_rating").desc(), F.col("count_of_ratings").desc()
         ).limit(5)
-        self.show_data(self.top_five_rated, truncate=False)
+        self._show_data(self.top_five_rated, truncate=False)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
-        self.log(f"'top_five_rated' transform approximate execution time - {exec_time}")
+        self._log(f"'top_five_rated' transform approximate execution time - {exec_time}")
 
         return self.top_five_rated
 
@@ -147,12 +147,12 @@ class MoviesTransforms:
         self.movies_per_year = self.movies.groupBy("release_date").agg(
             F.count("id").alias("movies_released")
         )
-        self.show_data(self.movies_per_year, n=10)
+        self._show_data(self.movies_per_year, n=10)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
-        self.log(f"'movies_per_year' transform approximate execution time - {exec_time}")
+        self._log(f"'movies_per_year' transform approximate execution time - {exec_time}")
 
         return self.movies_per_year
 
@@ -185,12 +185,12 @@ class MoviesTransforms:
         self.count_of_movies_per_genre = movie_genres_pivoted.selectExpr(
             *count_of_genres_select_expr
         )
-        self.show_data(self.count_of_movies_per_genre)
+        self._show_data(self.count_of_movies_per_genre)
 
         end_time = time.time()
         exec_time = round(end_time - start_time, 2)
 
-        self.log(f"'count_of_movies_per_genre' transform approximate execution time - {exec_time}")
+        self._log(f"'count_of_movies_per_genre' transform approximate execution time - {exec_time}")
 
         return self.count_of_movies_per_genre
 
@@ -220,7 +220,7 @@ class MoviesTransforms:
             f"{str(FOLDER_PATH)}/{write_locations['processed_dataframes']}/count_of_movies_per_genre"
         )
 
-    def show_data(self, df: DataFrame, truncate=True, n=20) -> None:
+    def _show_data(self, df: DataFrame, truncate=True, n=20) -> None:
         """
         Shows the data of the passed DataFrame if the execution file isn`t a test file
 
@@ -229,17 +229,17 @@ class MoviesTransforms:
         :param: n: The number of rows to be shown
         :return: None
         """
-        if not self.is_caller_test_file:
+        if not self._is_caller_test_file:
             df.show(truncate=truncate, n=n)
 
-    def log(self, message: str) -> None:
+    def _log(self, message: str) -> None:
         """
         Logs the passed message if the execution file isn`t a test file
 
         :param: message: The message to log
         :return: None
         """
-        if not self.is_caller_test_file:
+        if not self._is_caller_test_file:
             logging.info(message)
 
 
