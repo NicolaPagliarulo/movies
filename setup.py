@@ -15,6 +15,6 @@ setup(
     author='Nicola Pagliarulo',
     author_email='nicola.pagliarulo200@gmail.com',
     description='A package for transforming movie data using PySpark',
-    url='https://github.com/yourusername/movie-transforms',
+    url='https://github.com/NicolaPagliarulo/movies',
     license='MIT',
 )
