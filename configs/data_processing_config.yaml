@@ -3,3 +3,5 @@ data_sources:
   ratings_csv: "archive/ratings_small.csv"
 write_locations:
   processed_dataframes: "processed_dataframes"
+log_locations:
+  movies_transforms_logs: "logging/movies_transforms.log"
