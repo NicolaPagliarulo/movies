@@ -1,6 +1,6 @@
 # Project Movies
 
-This project reads 2 data sources (movies, ratings_small) and processes them through 5 various transformations.
+This project reads 2 data sources (movies_metadata.csv, ratings_small.csv) and processes them through 5 various transformations.
 After the transformations are completed, it writes the processed dataframes in a JSON format.
 
 # ! This project uses Apache Spark !
